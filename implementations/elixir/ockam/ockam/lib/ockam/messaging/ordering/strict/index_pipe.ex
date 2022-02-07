@@ -54,7 +54,9 @@ defmodule Ockam.Messaging.Ordering.Strict.IndexPipe.Receiver do
             {:ok, enqueue_message(index, message, state)}
 
           :next ->
-            {:ok, send_message(index, message, state)}
+            send_message(message)
+            state = Map.put(state, :current_index, index)
+            {:ok, process_queue(state)}
         end
 
       other ->
@@ -76,10 +78,8 @@ defmodule Ockam.Messaging.Ordering.Strict.IndexPipe.Receiver do
     end
   end
 
-  def send_message(index, message, state) do
+  def send_message(message) do
     Ockam.Router.route(message)
-    state = Map.put(state, :current_index, index)
-    process_queue(state)
   end
 
   defp process_queue(state) do
@@ -92,7 +92,9 @@ defmodule Ockam.Messaging.Ordering.Strict.IndexPipe.Receiver do
 
       {message, rest} ->
         state = Map.put(state, :queue, rest)
-        send_message(next_index, message, state)
+        send_message(message)
+        state = Map.put(state, :current_index, next_index)
+        process_queue(state)
     end
   end
 
